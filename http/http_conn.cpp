@@ -21,6 +21,13 @@ int setnonblocking(int fd){
     fcntl(fd, F_SETFL, new_option);
     return old_option;
 }
+//将文件描述符设置为阻塞模式
+int setblocking(int fd){
+    int old_option = fcntl(fd, F_GETFL);
+    int new_option = old_option & ~O_NONBLOCK;
+    fcntl(fd, F_SETFL, new_option);
+    return old_option;
+}
 
 //往epoll里添加事件监视，默认读就绪事件、边缘触发和管道挂起事件，可选单次触发选项,并将文件描述符设置为非阻塞模式
 void addfd(int epollfd, int fd, bool one_shot, bool isET){
@@ -352,12 +359,15 @@ bool http_conn::write(){
     }
     while(1){
         //将包含应答头和应答体的内存块写入
-        temp = writev(_sockfd, _iv, _iv_count);//如果发送缓冲区满了，就尽量发送发送缓冲区的东西，并返回-1，提示下次再发
-        if(temp <= -1){
+        
+        temp = writev(_sockfd, _iv, _iv_count);//如果发送缓冲区满了，返回-1；如果没满，但发不完，就尽量发送发送缓冲区的东西，返回发送的字节数，提示下次再发。两种情况都会设置EAGAIN
+        printf("发送了%d的数据\n", temp);
+        if (temp <= -1)
+        {
             //如果TCP写缓冲没有空间，则等待下一轮EPOLLOUT事件。虽然在这一期间，服务器无法接收到同一客户的下一请求，但可以保证连接的完整性
             //顺带一提，目前代码版本由于没有记录当前发送的状态，因此即使下一轮epollout事件到达，他也无法发送完剩余的内容
             if(errno == EAGAIN){
-                printf("发送了%d字节的数据，仍未发完！\n", temp);
+                printf("0v0仍未发完！\n");
                 modfd(_epollfd, _sockfd, EPOLLOUT);
                 return true;
             }
@@ -368,8 +378,7 @@ bool http_conn::write(){
         bytes_hava_send += temp;
         //如果已经发送的数据大于等于需要发送的数据，说明已经发送完毕
         if(bytes_to_send <= bytes_hava_send){
-            //发送HTTP响应成功，根据HTTP请求中的Connection字段决定是否关闭连接
-            printf("成功发送了%d字节的数据！\n", temp);
+            //发送HTTP响应成功，根据HTTP请求中的Connection字段决定是否关闭连接            
             unmap();
             if(_linger){
                 init();
