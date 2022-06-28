@@ -1,4 +1,5 @@
 #include"http_conn.h"
+#include "Log.h"
 
 //定义HTTP响应的一些状态信息
 const char* ok_200_title = "OK";
@@ -96,6 +97,7 @@ void http_conn::init(){
     _start_line = 0;
     _checked_idx = 0;
     _read_idx = 0;
+    _byte_hava_send = 0;
     _write_idx = 0;
     memset(_read_buf, 0, READ_BUFFER_SIZE);
     memset(_write_buf, 0, WRITE_BUFFER_SIZE);
@@ -171,6 +173,7 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char* text){
     if(!_url){
         return BAD_REQUEST;
     }
+    LOG_INFO("parse_request_line 176", "得到请求行:%s", text);
     //切割字符串
     *_url++ = '\0';
     //此时URL指向URL部分的第一个字节
@@ -180,8 +183,8 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char* text){
     //比较字符串，如果相同返回0
     if(strcasecmp(method, "GET") == 0){//仅支持GET方法
         printf(" GET 请求\n");
-    }
-    else{
+    } else {
+        LOG_WARN("parse_request_line 187", "%s%s", "不支持的方法", method);
         printf(" %s 请求，不支持捏\n", method);
         return BAD_REQUEST;
     }
@@ -215,7 +218,7 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char* text){
 http_conn::HTTP_CODE http_conn::parse_headers(char *text){
     if(text[0] == 0){//如果直接遇到空行，说明头部字段解析完毕
         //如果HTTP请求有消息体，就需要读取_content_length字节的消息体，状态机转移状态
-        if(!_content_length != 0){
+        if(_content_length != 0){
             _check_state = CHECK_STATE_CONTENT;
             return NO_REQUEST;
         }
@@ -349,10 +352,8 @@ void http_conn::unmap(){
 //这份代码并不能实现大文件的传输，超出了buffer的size只会发送第一次
 bool http_conn::write(){
     int temp = 0;
-    int bytes_hava_send = 0;
-    int bytes_to_send = _write_idx + _file_stat.st_size;
     //如果没有什么要写的(那为什么会触发)，就将任务清空
-    if(bytes_to_send == 0){
+    if(_byte_to_send == 0){
         modfd(_epollfd, _sockfd, EPOLLIN);
         init();
         return true;
@@ -361,23 +362,32 @@ bool http_conn::write(){
         //将包含应答头和应答体的内存块写入
         
         temp = writev(_sockfd, _iv, _iv_count);//如果发送缓冲区满了，返回-1；如果没满，但发不完，就尽量发送发送缓冲区的东西，返回发送的字节数，提示下次再发。两种情况都会设置EAGAIN
-        printf("发送了%d的数据\n", temp);
         if (temp <= -1)
         {
             //如果TCP写缓冲没有空间，则等待下一轮EPOLLOUT事件。虽然在这一期间，服务器无法接收到同一客户的下一请求，但可以保证连接的完整性
             //顺带一提，目前代码版本由于没有记录当前发送的状态，因此即使下一轮epollout事件到达，他也无法发送完剩余的内容
             if(errno == EAGAIN){
-                printf("0v0仍未发完！\n");
+                LOG_INFO("write", "%s", "缓冲区已满");
                 modfd(_epollfd, _sockfd, EPOLLOUT);
                 return true;
             }
             unmap();
             return false;
         }
-        //bytes_to_send -= temp;//不能理解下面的判断条件，也许是作者写错了。这里将这句话注释，可以满足我的理解
-        bytes_hava_send += temp;
+        LOG_INFO("write", "发送了%d字节数据", temp);
+        _byte_hava_send += temp;
+        _byte_to_send -= temp;
+        if (_byte_hava_send >= _iv[0].iov_len) {
+            _iv[0].iov_len = 0;
+            _iv[1].iov_base = _file_address + (_byte_hava_send - _write_idx);
+            _iv[1].iov_len = _byte_to_send;
+        } else {
+            _iv[0].iov_base = _write_buf + _byte_hava_send;
+            _iv[0].iov_len = _iv[0].iov_len - _byte_hava_send;
+        }
+        
         //如果已经发送的数据大于等于需要发送的数据，说明已经发送完毕
-        if(bytes_to_send <= bytes_hava_send){
+        if(_byte_to_send <= 0){
             //发送HTTP响应成功，根据HTTP请求中的Connection字段决定是否关闭连接            
             unmap();
             if(_linger){
@@ -485,6 +495,7 @@ bool http_conn::process_write(HTTP_CODE ret){
             _iv[0].iov_len = _write_idx;
             _iv[1].iov_base = _file_address;
             _iv[1].iov_len = _file_stat.st_size;
+            _byte_to_send += _write_idx + _file_stat.st_size;
             _iv_count = 2;
             return true;
         }

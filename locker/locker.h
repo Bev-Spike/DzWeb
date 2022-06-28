@@ -24,6 +24,7 @@ public:
 
     bool lock();
     bool unlock();
+    pthread_mutex_t* getMutex();
 
 private:
     pthread_mutex_t _mutex;
@@ -33,11 +34,12 @@ class cond{
 public:
     cond();
     ~cond();
-    bool wait();
+    bool wait(locker &mutex);
     bool signal();
+    bool broadcast();
+    bool timewait(locker &mutex, struct timespec t);
 
 private:
-    pthread_mutex_t _mutex;
     pthread_cond_t _cond;
 };
 

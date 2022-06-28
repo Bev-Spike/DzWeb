@@ -137,7 +137,8 @@ private:
     char _write_buf[WRITE_BUFFER_SIZE];
     //写缓冲区中待发送的字节数
     int _write_idx;
-
+    int _byte_hava_send;
+    int _byte_to_send;
     //主状态机当前所处的状态
     CHECK_STATE _check_state;
     //请求方法
