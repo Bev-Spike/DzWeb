@@ -1,6 +1,8 @@
 #ifndef HTTPCONNECTION_H
 #define HTTPCONNECTION_H
 
+#include <fstream>
+#include <memory>
 #include<unistd.h>
 #include<signal.h>
 #include<sys/types.h>
@@ -154,6 +156,7 @@ private:
     char *_host;
     //http请求的消息体的长度
     int _content_length;
+     int _content_have_read;
     //HTTP请求是否要求保持连接
     bool _linger;
 
@@ -164,6 +167,17 @@ private:
     //采用writev来执行写操作，将多个内存块拼接并一起发送出去。iv_count代表内存块的数量
     struct iovec _iv[2];
     int _iv_count;
+
+    // content体存放的指针
+    std::unique_ptr<char[]> _content_buffer;
+
+
+    //测试函数
+    void print_to_file(const char* data, const char* filename, int size) {
+        std::ofstream binaryio(filename, std::ios::binary);
+        binaryio.write(data, size);
+        binaryio.close();
+    }
 };
 
 #endif

@@ -2,6 +2,7 @@
 #define LOCKER_H
 
 #include<exception>
+#include <memory>
 #include<pthread.h>
 #include<semaphore.h>
 
@@ -41,6 +42,21 @@ public:
 
 private:
     pthread_cond_t _cond;
+};
+
+//RAII机制的lock
+class MutexLockGuard {
+  public:
+    explicit MutexLockGuard(locker& lock) : locke(lock) {
+        locke.lock();
+    }
+
+    ~MutexLockGuard() {
+        printf("锁守卫析构！\n");
+        locke.unlock();
+    }
+  private:
+    locker& locke;
 };
 
 #endif

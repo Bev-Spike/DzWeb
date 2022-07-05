@@ -68,7 +68,7 @@ public:
             _mutex.unlock();
             return false;
         }
-        value = _array[_front];
+        value = _array[(_front + 1) % _maxSize];
         _mutex.unlock();
         return true;
     }
@@ -79,7 +79,7 @@ public:
             _mutex.unlock();
             return false;
         }
-        value = _array[_back];
+        value = _array[(_back + _maxSize - 1) % _maxSize];
         _mutex.unlock();
         return true;
     }
@@ -102,7 +102,7 @@ public:
     //往队尾添加元素，添加元素后将所有阻塞的线程全部唤醒，使其竞争获得元素
     //如果队列已满，也唤醒所有线程
     //若无线程等待条件变量，唤醒则无意义
-    bool push(const T&item){
+    bool push(const T& item){
         _mutex.lock();
         if(_size >= _maxSize){
             _cond.broadcast();

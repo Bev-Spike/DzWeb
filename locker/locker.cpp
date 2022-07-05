@@ -31,7 +31,7 @@ locker::locker(){
     }
 }
 //销毁互斥锁
-locker::~locker(){
+locker::~locker() {
     pthread_mutex_destroy(&_mutex);
 }
 //上锁

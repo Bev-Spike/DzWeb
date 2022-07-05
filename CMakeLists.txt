@@ -31,7 +31,8 @@ target_link_libraries (${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 INCLUDE_DIRECTORIES(./http
                     ./locker
                     ./threadpool
-                    ./log)
+                    ./log
+                    ./sql)
 # TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PUBLIC ./threadpool)
 
 
@@ -39,6 +40,7 @@ INCLUDE_DIRECTORIES(./http
 add_subdirectory(./http)
 add_subdirectory(./locker)
 add_subdirectory(./log)
+add_subdirectory(./sql)
 
 # 添加链接库
-target_link_libraries(${PROJECT_NAME} httplib lockerlib loglib)
+target_link_libraries(${PROJECT_NAME} httplib lockerlib loglib sqllib)

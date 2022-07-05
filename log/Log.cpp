@@ -1,4 +1,5 @@
 #include "Log.h"
+#include <string>
 
 //根目录的名字
 const char *rootDir = "/home/ubuntu/ToyWeb/var/logdata/";
@@ -78,7 +79,8 @@ bool Log::writeLog(int level, const char* funcName, const char *format, ...){
                      funcName);
     int m = vsnprintf(buf + n, 512 - n, format, valist);
     buf[n + m] = '\n';
-    addQueue(buf);
+    std::string s(buf);
+    addQueue(s);
     return true;
 }
 

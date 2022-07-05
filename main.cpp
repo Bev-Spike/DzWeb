@@ -1,6 +1,7 @@
 #include "http_conn.h"
 #include "locker.h"
 #include "threadpool.h"
+#include <Log.h>
 
 #include <arpa/inet.h>
 #include <assert.h>
@@ -19,7 +20,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/uio.h>
-#include<Log.h>
+#include <memory>
+#include <vector>
 #include <unistd.h>
 
 #define MAX_FD           65536
@@ -61,15 +63,10 @@ int main(int argc, char* argv[]) {
     Log::getInstance().start();
 
     //创建线程池
-    threadpool<http_conn>* pool = NULL;
-    try {
-        pool = new threadpool<http_conn>(8);
-    } catch (...) {
-        return 1;
-    }
+    std::shared_ptr<threadpool<http_conn>> pool(new threadpool<http_conn>(1));
+    
     //预先为每个可能的客户链接分配一个http_conn对象
-    http_conn* user = new http_conn[MAX_FD];
-    assert(user);
+    std::vector<http_conn> user(MAX_FD);
     int user_count = 0;
 
     int listenfd = socket(PF_INET, SOCK_STREAM, 0);
@@ -159,7 +156,5 @@ int main(int argc, char* argv[]) {
     close(epollfd);
     close(listenfd);
     Log::getInstance().stop();
-    delete[] user;
-    delete pool;
     return 0;
 }
