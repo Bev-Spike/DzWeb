@@ -4,6 +4,7 @@
 
 #include <cstring>
 #include <memory>
+#include <string>
 
 //定义HTTP响应的一些状态信息
 const char* ok_200_title = "OK";
@@ -253,6 +254,7 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char* text) {
 
 //分析头部字段
 http_conn::HTTP_CODE http_conn::parse_headers(char* text) {
+    std::string s(text);
     if (text[0] == 0) { //如果直接遇到空行，说明头部字段解析完毕
         //如果HTTP请求有消息体，就需要读取_content_length字节的消息体，状态机转移状态
         if (_content_length != 0) {
@@ -284,6 +286,23 @@ http_conn::HTTP_CODE http_conn::parse_headers(char* text) {
         _host = text;
         printf("the request host is :%s\n", text);
     }
+    else if (s.substr(0, 13) == "Content-Type:") {
+        std::string pattern = "multipart/form-data";
+        int i = s.find(pattern, 13);
+        if (i < 0)
+            printf("i can not handle this content type:%s\n",
+                   s.c_str());
+        else {
+            i = s.find("boundary", 34);
+            if (i < 0) {
+                printf("get boundary ERROR:%s\n", s.c_str());
+            }
+            else {
+                _boundary = s.substr(i + 9);
+                printf("Get boundary:%s\n", _boundary.c_str());
+            }
+        }
+    }
     else {
         //其他头部字段都不处理
         printf("i can not handle this header: %s\n", text);
@@ -293,7 +312,7 @@ http_conn::HTTP_CODE http_conn::parse_headers(char* text) {
 
 //解析HTTP请求的请求体，但没有解析，只是判断是否被完整读入了
 http_conn::HTTP_CODE http_conn::parse_content(char* text) {
-    printf("请求体:%s\n", text);
+    //printf("请求体:%s\n", text);
     //下面这个函数只有第一次调用的时候是有用的
     //当读缓冲区的数据全部读完之后，下面这个函数只会复制0个字节过去
     //数据读取操作由read()成员函数接管
@@ -303,7 +322,6 @@ http_conn::HTTP_CODE http_conn::parse_content(char* text) {
     _content_have_read += _read_idx - _checked_idx;
     _checked_idx = _read_idx;
     if (_content_have_read >= _content_length) {
-        _content_buffer[_content_length] = 0;
         print_to_file(_content_buffer.get(), "content.txt", _content_length);
         return GET_REQUEST;
     }
@@ -324,7 +342,7 @@ http_conn::HTTP_CODE http_conn::process_read() {
         //获取当前行的起始位置并更新行的起始位置
         text = get_line();
         _start_line = _checked_idx;
-        printf("得到新的http行：%s\n", text);
+        //printf("得到新的http行：%s\n", text);
 
         switch (_check_state) {
         case CHECK_STATE_REQUESTLINE: {

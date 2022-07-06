@@ -170,7 +170,7 @@ private:
 
     // content体存放的指针
     std::unique_ptr<char[]> _content_buffer;
-
+    std::string _boundary;
 
     //测试函数
     void print_to_file(const char* data, const char* filename, int size) {

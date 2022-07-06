@@ -16,11 +16,14 @@ class FormItem {
     std::string getContentType() const;
     //判断对象元素是否为文件
     bool isFile() const;
+    //返回conetn的长度
+    int getLength() const;
     //返回对象元素的具体内容(value)
     //考虑到conetnt可能是二进制数据，使用字符数组存储
     //为了防止外界对content作出修改，这里返回的是数据的拷贝
     std::unique_ptr<char[]> getContent() const;
-
+    //将Content以文件的方式保存
+    bool saveContentToFile(std::string filename = "") const;
 
   private:
     FormItem(const std::string name,

@@ -2,3 +2,5 @@ build/
 .*
 var/logdata
 var/www/html/resourse
+*.jpg
+*.png

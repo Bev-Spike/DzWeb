@@ -2,14 +2,16 @@
 #include <string>
 #include <memory>
 #include <vector>
-#include "FormItem.h"
+
+class FormItem;
+
 class FormDataParser {
     
     //当前表单的数据信息
     struct ItemParam {
-        std::string& partKey;
-        std::string& partFileName;
-        std::string& partContentType;
+        std::string partKey;
+        std::string partFileName;
+        std::string partContentType;
         int partDataStart;
         int partDataLength;
     };
@@ -34,11 +36,11 @@ class FormDataParser {
     //解析表单数据的头部
     void parseHeader(ItemParam& param);
     //解析表单元素中的具体数据
-    void paresFormData();
+    void paresFormData(ItemParam& param);
     //获取下一行数据,返回行的起始下标和行长度
     bool getNextLine(int& lineStart, int& lineLength);
     //判断是否为边界分割行
-    bool atBoundaryLine();
+    bool atBoundaryLine(int lineStart, int lineLength);
     //判断是否到表单元素的末尾
     bool atEndOfData();
     //根据不同的key获取当前行中所需的值
