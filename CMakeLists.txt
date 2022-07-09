@@ -9,10 +9,10 @@ endif()
 # 设置编译的主文件(自己写的)
 #set(SRC_FILE ./main.cpp)
 set(SRC_FILE ./test.cpp)
-set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
+#set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
 # C++11
 # C++17
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 # 设置编译器是否一定要支持该标准
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 设置是否启用GCC的扩展功能

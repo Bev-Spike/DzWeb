@@ -8,6 +8,7 @@
 #include <iostream>
 #include <memory>
 #include <pthread.h>
+#include"DataBase.h"
 #include <sstream>
 #include <string>
 using namespace std;
@@ -83,8 +84,60 @@ void formTest() {
     fin.close();
 }
 
+void dbTest() {
+    try {
+        DataBase db(user, passwd, DBName);
+        cout << "DBname: " << db.getDataBaseName() << endl;
+        auto result = db.query("select * from User");
+
+        if (result.getRows().size() == 0) {
+            cout << "无查询结果!" << endl;
+        }
+        else {
+            for (const QueryRow& row : result.getRows()) {
+                cout << row[string("user_name" )];
+                cout << endl;
+            }
+        }
+        
+    } catch (MySQLException& e) {
+        cout << e.what();
+    }
+}
+
 int main() {
-    formTest();
+    dbTest();
+
+    // const char* host = "localhost"; //主机名
+    // const char* user = "root"; //用户名
+    // const char* pwd = "594137"; //密码
+    // const char* dbName = "dingzhen"; //数据库名称
+    // int port = 3306; //端口号
+
+    // // 创建mysql对象
+    // MYSQL *sql = nullptr;
+    // sql = mysql_init(sql);
+    // if (!sql) {
+    //     cout << "MySql init error!" << endl;
+    // }
     
+    // // 连接mysql
+    // sql = mysql_real_connect(sql, host, user, pwd, dbName, port, nullptr, 0);
+    // if (!sql) {
+    //     cout << "MySql Connect error!" << endl;
+    // }
+
+    // // 执行命令
+    // std::string s= "select * from user";
+    // int ret = mysql_real_query(sql, s.data(), s.size());
+    // if (ret) {
+    //     cout << mysql_error(sql) << endl;
+    //     cout << "error!" << endl;
+    // } else {
+    //     cout << "success!" << endl;
+    // }
+    
+    // // 关闭mysql
+    // mysql_close(sql);
     return 0;
 }
