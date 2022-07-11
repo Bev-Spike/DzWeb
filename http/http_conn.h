@@ -54,7 +54,7 @@ public:
     //服务器处理HTTP请求的可能结果
     enum HTTP_CODE{
         NO_REQUEST,GET_REQUEST, BAD_REQUEST,
-        NO_RESOURCE, FORBIDDEN_REQUEST, FILE_REQUEST,
+        NO_RESOURCE, FORBIDDEN_REQUEST, FILE_REQUEST, DYNAMIC_REQUEST,
         INTERNAL_ERROR, CLOSED_CONNECTION
     };
     //行的读取状态
@@ -96,10 +96,11 @@ private:
     HTTP_CODE parse_content(char *text);
     //分析请求的入口函数
     HTTP_CODE do_request();
+    //创建文件映射
+    HTTP_CODE do_file_mmap(std::string url);
     //返回当前行的起始位置
-    char* get_line(){
-        return _read_buf + _start_line;
-    }
+    char* get_line() { return _read_buf + _start_line; }
+    
     //获取一行请求
     LINE_STATUS parse_line();
 
@@ -169,9 +170,11 @@ private:
     int _iv_count;
 
     // content体存放的指针
-    std::unique_ptr<char[]> _content_buffer;
+    std::shared_ptr<char[]> _content_buffer;
     std::string _boundary;
 
+    //应答体存放的指针，通常用于保存动态页面的字符串
+    std::unique_ptr<std::string> _response_content;
     //测试函数
     void print_to_file(const char* data, const char* filename, int size) {
         std::ofstream binaryio(filename, std::ios::binary);

@@ -7,9 +7,9 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 # 设置编译的主文件(自己写的)
-#set(SRC_FILE ./main.cpp)
-set(SRC_FILE ./test.cpp)
-#set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
+set(SRC_FILE ./main.cpp)
+#set(SRC_FILE ./test.cpp)
+set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
 # C++11
 # C++17
 set(CMAKE_CXX_STANDARD 14)
@@ -33,7 +33,8 @@ INCLUDE_DIRECTORIES(./http
                     ./threadpool
                     ./log
                     ./sql
-                    ./FormParser)
+                    ./FormParser
+                    ./PostSolver)
 # TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PUBLIC ./threadpool)
 
 
@@ -43,6 +44,7 @@ add_subdirectory(./locker)
 add_subdirectory(./log)
 add_subdirectory(./sql)
 add_subdirectory(./FormParser)
+add_subdirectory(./PostSolver)
 
 # 添加链接库
-target_link_libraries(${PROJECT_NAME} httplib lockerlib loglib sqllib formlib)
+target_link_libraries(${PROJECT_NAME} httplib lockerlib loglib sqllib  formlib postlib )

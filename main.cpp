@@ -1,3 +1,4 @@
+#include "SqlConnectionPool.h"
 #include "http_conn.h"
 #include "locker.h"
 #include "threadpool.h"

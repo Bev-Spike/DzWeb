@@ -18,8 +18,9 @@ ConnectionPool::ConnectionPool()
     : _curConn(0),
       _freeConn(0),
       _maxConn(0),
-      _useLog(true)
-      {}
+      _useLog(true) {
+        init("localhost", "root", "594137", "dingzhen", 3306, 8);
+      }
 
 ConnectionPool::~ConnectionPool() {
     MutexLockGuard guard(this->_lock);

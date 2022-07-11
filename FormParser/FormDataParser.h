@@ -2,6 +2,8 @@
 #include <string>
 #include <memory>
 #include <vector>
+//#include"FormItem.h"
+//可以做个基类，以拓展不同的分析器。这里还没有实现，太麻烦了= =
 
 class FormItem;
 

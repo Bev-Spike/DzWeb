@@ -1,7 +1,7 @@
 #include "http_conn.h"
-
+#include "SqlConnectionPool.h"
 #include "Log.h"
-
+#include "PostSolver.h"
 #include <cstring>
 #include <memory>
 #include <string>
@@ -211,9 +211,11 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char* text) {
     char* method = text;
     //比较字符串，如果相同返回0
     if (strcasecmp(method, "GET") == 0) { //仅支持GET方法
+        _method = GET;
         printf(" GET 请求\n");
     }
     else if (strcasecmp(method, "POST") == 0) {
+        _method = POST;
         printf("POST 请求\n");
     }
     else {
@@ -259,7 +261,7 @@ http_conn::HTTP_CODE http_conn::parse_headers(char* text) {
         //如果HTTP请求有消息体，就需要读取_content_length字节的消息体，状态机转移状态
         if (_content_length != 0) {
             //给请求体分配内存
-            _content_buffer = std::make_unique<char[]>(_content_length);
+            _content_buffer = std::shared_ptr<char[]>(new char[_content_length]);
             _check_state = CHECK_STATE_CONTENT;
             return NO_REQUEST;
         }
@@ -312,15 +314,19 @@ http_conn::HTTP_CODE http_conn::parse_headers(char* text) {
 
 //解析HTTP请求的请求体，但没有解析，只是判断是否被完整读入了
 http_conn::HTTP_CODE http_conn::parse_content(char* text) {
-    //printf("请求体:%s\n", text);
+    // printf("请求体:%s\n", text);
     //下面这个函数只有第一次调用的时候是有用的
     //当读缓冲区的数据全部读完之后，下面这个函数只会复制0个字节过去
     //数据读取操作由read()成员函数接管
-    strncpy(_content_buffer.get() + _content_have_read,
+    printf("content_buffer size:%d \n", _content_length);
+    printf("content_have_read:%d \n", _content_have_read);
+    printf("_read_idx: %d, _checked_idx: %d\n",_read_idx, _checked_idx );
+    memcpy(_content_buffer.get() + _content_have_read,
             _read_buf + _checked_idx,
             _read_idx - _checked_idx);
     _content_have_read += _read_idx - _checked_idx;
     _checked_idx = _read_idx;
+    printf("安全落地\n");
     if (_content_have_read >= _content_length) {
         print_to_file(_content_buffer.get(), "content.txt", _content_length);
         return GET_REQUEST;
@@ -379,12 +385,42 @@ http_conn::HTTP_CODE http_conn::process_read() {
     return NO_REQUEST;
 }
 
-// 当得到一个完整、正确的额HTTP请求时，我们就分析目标文件的属性（因为HTTP请求通常都是请求获得一个文件）。如果目标文件存在、对所有用户可读，且不是目录
+// 当得到一个完整、正确的HTTP请求时，我们就分析目标文件的属性（因为HTTP请求通常都是请求获得一个文件）。如果目标文件存在、对所有用户可读，且不是目录
 // 则使用mmap将其映射到内存地址_file_address处，并告诉调用者获取文件成功
+//
 http_conn::HTTP_CODE http_conn::do_request() {
+    if (_method == GET) {
+        return do_file_mmap(_url);
+    }
+    else if (_method == POST) {
+        MYSQL* sqlconn;
+        ConnectionGuard cguard(sqlconn, ConnectionPool::GetInstance());
+        PostSolver solver(_sockfd,
+                          false,
+                          _content_buffer,
+                          _content_length,
+                          _url,
+                          _boundary,
+                          sqlconn);
+        solver.process();
+        if (solver.isFile()) {
+            return do_file_mmap(solver.getFilePath());
+        }
+        else {
+            _response_content = solver.getRequest();
+            if(_response_content == nullptr) return BAD_REQUEST;
+            return DYNAMIC_REQUEST;
+        }
+    }
+}
+
+//该函数的作用是在需要返回静态文件资源时，将静态文件创建出一个内存映射
+//创建出的内存映射将用于后续的文件发送
+//如果操作成功，将返回FILE_REQUEST
+http_conn::HTTP_CODE http_conn::do_file_mmap(std::string url) {
     strcpy(_real_file, doc_root);
     int len = strlen(doc_root);
-    strncpy(_real_file + len, _url, FILENAME_LEN - len - 1);
+    strncpy(_real_file + len, url.c_str(), FILENAME_LEN - len - 1);
     //获取文件状态，同时判断是否存在
     if (stat(_real_file, &_file_stat) < 0) {
         return NO_RESOURCE;
@@ -405,6 +441,7 @@ http_conn::HTTP_CODE http_conn::do_request() {
     close(fd);
     return FILE_REQUEST;
 }
+
 
 //对内存映射区执行munmap操作
 void http_conn::unmap() {

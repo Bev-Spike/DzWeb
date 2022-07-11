@@ -12,14 +12,24 @@ class PostSolver {
                int contentLength,
                std::string url,
                std::string boundary,
-               std::string entype,
-               MYSQL* sqlconn = nullptr
-               );
+               MYSQL* sqlconn = nullptr,
+               std::string entype = "multipart/form-data");
+    //处理主流程
+    void process();
+    //返回应答体
+    std::unique_ptr<std::string> getRequest();
 
-
+    //判断是否获取静态页面
+    inline bool isFile() const { return _isFile; }
+    inline std::string getFilePath() const { return _filePath; }
+    
   private:
+    //CGI方式处理
+    void processCGI();
+    //本线程里处理
+    void processLocal();
     //各种生成html的文件
-    void makeLogin();
+    void Login();
     //......
   private:
     bool _useCGI;
@@ -30,9 +40,12 @@ class PostSolver {
     std::string _entype;
     std::string _boundary;
     MYSQL* _sqlconn;
-    //储存要发送的所有数据，包括应答头和HTML内容
+    //储存要发送的应答体
     std::unique_ptr<std::string> _request;
     int _requestLength;
+    //判断是否发送静态页面
+    bool _isFile;
+    std::string _filePath;
     //请求体表单处理类
     std::unique_ptr<FormDataParser> _parser;
 };
