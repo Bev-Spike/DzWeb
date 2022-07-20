@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
     //timer初始化
     Timer timer;
     //创建线程池
-    std::shared_ptr<threadpool<http_conn>> pool(new threadpool<http_conn>(1));
+    std::shared_ptr<threadpool<http_conn>> pool(new threadpool<http_conn>(4));
     
     //预先为每个可能的客户链接分配一个http_conn对象
     std::vector<http_conn> user(MAX_FD);
