@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <memory>
+#include <sstream>
 #include<unistd.h>
 #include<signal.h>
 #include<sys/types.h>
@@ -21,6 +22,7 @@
 #include<stdarg.h>
 #include<errno.h>
 #include<sys/uio.h>
+#include "Event.hpp"
 #include"locker.h"
 
 class http_conn{
@@ -121,7 +123,8 @@ public:
 
     //统计用户数量
     static int _user_count;
-
+    //注册在该客户连接上的心跳事件
+    std::shared_ptr<Event> _event;
 private:
     //该http连接的socket和对方的socket地址
     int _sockfd;

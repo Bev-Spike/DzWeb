@@ -19,7 +19,7 @@ ConnectionPool::ConnectionPool()
       _freeConn(0),
       _maxConn(0),
       _useLog(true) {
-        init("localhost", "root", "594137", "dingzhen", 3306, 8);
+        init("82.156.16.46", "root", "594137", "dingzhen", 3306, 2);
       }
 
 ConnectionPool::~ConnectionPool() {
@@ -69,6 +69,8 @@ void ConnectionPool::init(string url,
                                  _port,
                                  nullptr,
                                  0);
+        //设置编码
+        mysql_set_character_set(con, "utf8");
         if (con == nullptr) {
             LOG_ERROR("Connection::init", "%s", "数据库连接失败！");
             printf("数据库连接失败！\n");

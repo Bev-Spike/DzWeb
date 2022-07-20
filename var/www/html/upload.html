@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>上传丁真</title>
+    </head>
+    <body>
+<br/>
+<br/>
+    <div align="center"><font size="5"> <strong>上传</strong></font></div>
+    <br/>
+        <div class="login">
+                <form action="upload.cgi" method="post" enctype="multipart/form-data">
+                        <div align="center"><input type="text" name="text1" placeholder="一眼" required="required">丁真</div><br/>
+                        <div align="center">鉴定为:<input type="text" name="text2" placeholder="真" required="required"></div><br/>
+                        <div align="center"><input type="file" multiple="multiple" accept="image/*" name="image" required="required"></div>
+                        <br>
+                        <div align="center"><button type="submit">上传</button></div>
+                </form>
+        </div>
+    </body>
+</html>

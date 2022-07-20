@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <mysql/mysql.h>
+#include <sstream>
 #include <string>
 #include "FormDataParser.h"
 //可以处理multipart/form-data类型的表单提交post请求
@@ -28,8 +29,15 @@ class PostSolver {
     void processCGI();
     //本线程里处理
     void processLocal();
+
+    void addHtmlFront(); //添加前两行
+    void addHtmlTail();//添加最后一行
     //各种生成html的文件
     void Login();
+    //上传丁真
+    void Upload();
+    //检索丁真并显示出来
+    void Search();
     //......
   private:
     bool _useCGI;
@@ -41,12 +49,13 @@ class PostSolver {
     std::string _boundary;
     MYSQL* _sqlconn;
     //储存要发送的应答体
-    std::unique_ptr<std::string> _request;
+    std::shared_ptr<std::stringstream> _request;
     int _requestLength;
     //判断是否发送静态页面
     bool _isFile;
     std::string _filePath;
     //请求体表单处理类
     std::unique_ptr<FormDataParser> _parser;
+
 };
 

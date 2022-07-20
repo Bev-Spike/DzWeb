@@ -7,7 +7,7 @@
 
 body {
     height: 100vh;
-    background: url(resource/miao.png) no-repeat;
+    background: url(resourse/miao.png) no-repeat;
     background-size: cover;
     display: flex;
     justify-content: center;

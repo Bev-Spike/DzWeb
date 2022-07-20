@@ -2,7 +2,7 @@
 #include <string>
 
 //根目录的名字
-const char *rootDir = "/home/ubuntu/ToyWeb/var/logdata/";
+const char *rootDir = "./var/logdata/";
 
 //初始化，设置参数，创建文件
 bool Log::init(int maxLines, int maxQueueSize ){

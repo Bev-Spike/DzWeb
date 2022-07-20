@@ -20,9 +20,10 @@ DataBase::DataBase(const std::string& userName,
                             database.data(),
                             port,
                             unix_socket,
-                            client_flag)
-        ||mysql_query(_db, "set names utf8")
-        ) {
+                            client_flag) ||
+        mysql_query(_db, "set names utf8") || mysql_set_character_set(_db, "utf8")) {
+        
+        std::cout << mysql_error(_db) <<  std::endl;
         throw MySQLConnectException(mysql_error(_db));
     }
 }

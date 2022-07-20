@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.12) #最低要求的CMake版本
+cmake_minimum_required (VERSION 3.10) #最低要求的CMake版本
 project(ToyWeb LANGUAGES C CXX)  # 项目名称
 
 #如果没有指定编译类型，自动设置为Debug
@@ -9,10 +9,10 @@ endif()
 # 设置编译的主文件(自己写的)
 set(SRC_FILE ./main.cpp)
 #set(SRC_FILE ./test.cpp)
-set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
-# C++11
+#set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
+
 # C++17
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 # 设置编译器是否一定要支持该标准
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 设置是否启用GCC的扩展功能
@@ -34,7 +34,9 @@ INCLUDE_DIRECTORIES(./http
                     ./log
                     ./sql
                     ./FormParser
-                    ./PostSolver)
+                    ./PostSolver
+                    ./timer
+                    ./signal)
 # TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PUBLIC ./threadpool)
 
 
@@ -45,6 +47,7 @@ add_subdirectory(./log)
 add_subdirectory(./sql)
 add_subdirectory(./FormParser)
 add_subdirectory(./PostSolver)
+add_subdirectory(./timer)
 
 # 添加链接库
-target_link_libraries(${PROJECT_NAME} httplib lockerlib loglib sqllib  formlib postlib )
+target_link_libraries(${PROJECT_NAME} httplib lockerlib loglib sqllib  formlib postlib timerlib)

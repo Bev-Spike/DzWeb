@@ -1,7 +1,10 @@
 #include "http_conn.h"
-#include "SqlConnectionPool.h"
+
+#include "Event.hpp"
 #include "Log.h"
 #include "PostSolver.h"
+#include "SqlConnectionPool.h"
+
 #include <cstring>
 #include <memory>
 #include <string>
@@ -22,7 +25,7 @@ const char* error_500_form =
     "There was an unusual problem serveing the requested file.\n";
 
 //网站根目录
-const char* doc_root = "/home/ubuntu/ToyWeb/var/www/html";
+const char* doc_root = "./var/www/html";
 
 //将文件描述符设置为非阻塞模式
 int setnonblocking(int fd) {
@@ -76,10 +79,13 @@ int http_conn::_epollfd = -1;
 //关闭与目标客户的连接
 void http_conn::close_conn(bool real_close) {
     if (real_close && (_sockfd != -1)) {
+        printf("Socket %d conn closed.\n", _sockfd);
+        LOG_INFO(__FUNCTION__, "Socket %d conn closed.", _sockfd);
         removefd(_epollfd, _sockfd);
         _content_buffer.reset();
         _sockfd = -1;
         _user_count--;
+        //_event.reset();
     }
 }
 
@@ -113,6 +119,12 @@ void http_conn::init() {
     memset(_read_buf, 0, READ_BUFFER_SIZE);
     memset(_write_buf, 0, WRITE_BUFFER_SIZE);
     memset(_real_file, 0, FILENAME_LEN);
+    //初始化心跳事件
+    _event = std::shared_ptr<Event>(new Event);
+    _event->updateTime();
+    //注册回调函数，为关闭自身连接
+    _event->setCallBack(&http_conn::close_conn, this, true);
+    
 }
 
 //从状态机,用于读取一行数据
@@ -162,16 +174,20 @@ bool http_conn::read() {
         if (_check_state == CHECK_STATE_CONTENT) {
             //读取请求体
             printf("读取请求体\n");
-            bytes_read = recv(
-            _sockfd, _content_buffer.get() + _content_have_read, _content_length - _content_have_read, 0);
+            bytes_read = recv(_sockfd,
+                              _content_buffer.get() + _content_have_read,
+                              _content_length - _content_have_read,
+                              0);
         }
         else {
             //读取请求头
             //要求sockfd设置为非阻塞模式
-            bytes_read = recv(
-            _sockfd, _read_buf + _read_idx, READ_BUFFER_SIZE - _read_idx, 0);
+            bytes_read = recv(_sockfd,
+                              _read_buf + _read_idx,
+                              READ_BUFFER_SIZE - _read_idx,
+                              0);
         }
-        
+
         if (bytes_read == -1) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 break;
@@ -189,7 +205,6 @@ bool http_conn::read() {
         else {
             _read_idx += bytes_read;
         }
-        
     }
     return true;
 }
@@ -261,7 +276,8 @@ http_conn::HTTP_CODE http_conn::parse_headers(char* text) {
         //如果HTTP请求有消息体，就需要读取_content_length字节的消息体，状态机转移状态
         if (_content_length != 0) {
             //给请求体分配内存
-            _content_buffer = std::shared_ptr<char[]>(new char[_content_length]);
+            _content_buffer =
+                std::shared_ptr<char[]>(new char[_content_length]);
             _check_state = CHECK_STATE_CONTENT;
             return NO_REQUEST;
         }
@@ -292,8 +308,7 @@ http_conn::HTTP_CODE http_conn::parse_headers(char* text) {
         std::string pattern = "multipart/form-data";
         int i = s.find(pattern, 13);
         if (i < 0)
-            printf("i can not handle this content type:%s\n",
-                   s.c_str());
+            printf("i can not handle this content type:%s\n", s.c_str());
         else {
             i = s.find("boundary", 34);
             if (i < 0) {
@@ -320,10 +335,10 @@ http_conn::HTTP_CODE http_conn::parse_content(char* text) {
     //数据读取操作由read()成员函数接管
     printf("content_buffer size:%d \n", _content_length);
     printf("content_have_read:%d \n", _content_have_read);
-    printf("_read_idx: %d, _checked_idx: %d\n",_read_idx, _checked_idx );
+    printf("_read_idx: %d, _checked_idx: %d\n", _read_idx, _checked_idx);
     memcpy(_content_buffer.get() + _content_have_read,
-            _read_buf + _checked_idx,
-            _read_idx - _checked_idx);
+           _read_buf + _checked_idx,
+           _read_idx - _checked_idx);
     _content_have_read += _read_idx - _checked_idx;
     _checked_idx = _read_idx;
     printf("安全落地\n");
@@ -348,7 +363,7 @@ http_conn::HTTP_CODE http_conn::process_read() {
         //获取当前行的起始位置并更新行的起始位置
         text = get_line();
         _start_line = _checked_idx;
-        //printf("得到新的http行：%s\n", text);
+        // printf("得到新的http行：%s\n", text);
 
         switch (_check_state) {
         case CHECK_STATE_REQUESTLINE: {
@@ -408,7 +423,9 @@ http_conn::HTTP_CODE http_conn::do_request() {
         }
         else {
             _response_content = solver.getRequest();
-            if(_response_content == nullptr) return BAD_REQUEST;
+            if (_response_content == nullptr)
+                return BAD_REQUEST;
+
             return DYNAMIC_REQUEST;
         }
     }
@@ -441,7 +458,6 @@ http_conn::HTTP_CODE http_conn::do_file_mmap(std::string url) {
     close(fd);
     return FILE_REQUEST;
 }
-
 
 //对内存映射区执行munmap操作
 void http_conn::unmap() {
@@ -484,7 +500,13 @@ bool http_conn::write() {
         _byte_to_send -= temp;
         if (_byte_hava_send >= _iv[0].iov_len) {
             _iv[0].iov_len = 0;
-            _iv[1].iov_base = _file_address + (_byte_hava_send - _write_idx);
+            if (temp < _byte_hava_send - _write_idx) {
+                _iv[1].iov_base = (char*)_iv[1].iov_base + temp;
+            }
+            else {
+                _iv[1].iov_base =
+                    (char*)_iv[1].iov_base + (_byte_hava_send - _write_idx);
+            }
             _iv[1].iov_len = _byte_to_send;
         }
         else {
@@ -608,6 +630,32 @@ bool http_conn::process_write(HTTP_CODE ret) {
         }
         else {
             const char* ok_string = "<html><body></body></html>";
+            add_headers(strlen(ok_string));
+            if (!add_content(ok_string)) {
+                return false;
+            }
+        }
+        break;
+    }
+        //动态页面应答
+    case DYNAMIC_REQUEST: {
+        add_status_line(200, ok_200_title);
+        if (_response_content == nullptr)
+            return false;
+        if (_response_content->length() != 0) {
+            add_headers(_response_content->length());
+            _iv[0].iov_base = _write_buf;
+            _iv[0].iov_len = _write_idx;
+            //_file_address = (char*)_response_content->c_str();
+            _iv[1].iov_base = (void*)_response_content->c_str();
+            _iv[1].iov_len = _response_content->length();
+            // char* c = (char*)_iv[1].iov_base;
+            _byte_to_send += _write_idx + _response_content->length();
+            _iv_count = 2;
+            return true;
+        }
+        else {
+            const char* ok_string = "<html><body>啥也没有！</body></html>";
             add_headers(strlen(ok_string));
             if (!add_content(ok_string)) {
                 return false;
