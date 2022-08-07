@@ -8,6 +8,7 @@
 #include <cstring>
 #include <memory>
 #include <string>
+#include <unistd.h>
 
 //定义HTTP响应的一些状态信息
 const char* ok_200_title = "OK";
@@ -675,6 +676,7 @@ bool http_conn::process_write(HTTP_CODE ret) {
 
 //由线程池中的工作线程调用，这是处理HTTP请求的入口函数
 void http_conn::process() {
+    printf("socket fd:%d\n", _sockfd);
     HTTP_CODE read_ret = process_read();
     if (read_ret == NO_REQUEST) { //如果请求不完整，等待下次读取
         modfd(_epollfd, _sockfd, EPOLLIN);
