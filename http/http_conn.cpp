@@ -67,6 +67,8 @@ void removefd(int epollfd, int fd) {
 }
 
 //修改文件描述符注册的事件，即修改为ev + ET + oneshot + rdhup
+//因为采用了oneshot模式，因此每次触发事件后都得重新注册事件
+//之所以采用oneshot模式是为了防止在处理数据的过程中再次触发事件，导致同时有其他线程一起处理数据，导致混乱。
 void modfd(int epollfd, int fd, int ev) {
     epoll_event event;
     event.data.fd = fd;
@@ -487,9 +489,10 @@ bool http_conn::write() {
             _iv_count); //如果发送缓冲区满了，返回-1；如果没满，但发不完，就尽量发送发送缓冲区的东西，返回发送的字节数，提示下次再发。两种情况都会设置EAGAIN
         if (temp <= -1) {
             //如果TCP写缓冲没有空间，则等待下一轮EPOLLOUT事件。虽然在这一期间，服务器无法接收到同一客户的下一请求，但可以保证连接的完整性
-            //顺带一提，目前代码版本由于没有记录当前发送的状态，因此即使下一轮epollout事件到达，他也无法发送完剩余的内容
             if (errno == EAGAIN) {
                 LOG_INFO("write", "%s", "缓冲区已满");
+                //因为采用了oneshot模式，因此每次触发事件后都得重新注册事件
+                //再提一嘴，这里采用oneshot模式是为了防止在处理数据的过程中再次触发事件，导致同时有其他线程一起处理数据，导致混乱。
                 modfd(_epollfd, _sockfd, EPOLLOUT);
                 return true;
             }
